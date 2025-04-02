@@ -18,7 +18,7 @@ export default function HomePage(props) {
           content="Browse a list of highly active React meetups!"
         />
       </Head>
-      <MeetupList meetups={props.meetups} />;
+      <MeetupList meetups={props.meetups} />
     </Fragment>
   );
 }
