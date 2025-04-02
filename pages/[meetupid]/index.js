@@ -1,46 +1,73 @@
 import MeetupDetail from "../../components/meetups/MeetupDetail";
-export default function MeetupDetailsPage({meetupData}) {
+import { MongoClient, ObjectId } from "mongodb";
+import Head from "next/head";
+import { Fragment } from "react";
+
+export default function MeetupDetailsPage(props) {
   return (
-    <>
+    <Fragment>
+      <Head>
+        <title>{props.meetupData?.title}</title>
+        <meta name="description" content={props.meetupData?.description} />
+      </Head>
       <MeetupDetail
-      image={meetupData.image}
-      title={meetupData.title}
-      address={meetupData.address}
-      description={meetupData.description}
+        image={props.meetupData?.image}
+        title={props.meetupData?.title}
+        address={props.meetupData?.address}
+        description={props.meetupData?.description}
       />
-    </>
+    </Fragment>
   );
 }
 
 export async function getStaticPaths() {
+  const uri = "mongodb://localhost:27017/";
+  let client;
+  try {
+    client = await MongoClient.connect(uri);
+  } catch (error) {
+    return {
+      paths: [],
+      fallback: false,
+    };
+  }
+  const db = client.db("test");
+  const meetupsCollection = db.collection("meetups");
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+  client.close();
   return {
-    paths: [
-      {
-        params: {
-          meetupid: "m1",
-        },
-      },
-      {
-        params: {
-          meetupid: "m2",
-        },
-      },
-    ],
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
     fallback: false,
   };
 }
 export async function getStaticProps(context) {
-  const meetupId = context.params.meetupid;
-  console.log(meetupId);
-  // fetch data for a single meetup
+  const meetupId = context.params.meetupId;
+  const uri = "mongodb://localhost:27017/";
+  let client;
+  try {
+    client = await MongoClient.connect(uri);
+  } catch (error) {
+    return {
+      props: {
+        meetupData: null,
+      },
+    };
+  }
+  const db = client.db("test");
+  const meetupsCollection = db.collection("meetups");
+  const meetup = await meetupsCollection.findOne({
+    _id: ObjectId.createFromHexString(meetupId),
+  });
   return {
     props: {
       meetupData: {
-        id: meetupId,
-        title: "Meetup 1",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Canada_%28Pantone%29.svg/1200px-Flag_of_Canada_%28Pantone%29.svg.png",
-        address: "Meetup 1",
-        description: "Meetup 1",
+        id: meetup._id.toString(),
+        title: meetup.title,
+        image: meetup.image,
+        address: meetup.address,
+        description: meetup.description,
       },
     },
   };

@@ -1,23 +1,8 @@
 //import { useEffect } from "react";
 import MeetupList from "../components/meetups/MeetupList";
-const DUMMY_MEETUPS = [
-  {
-    id: "m1",
-    title: "A First Meetup",
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Canada_%28Pantone%29.svg/1200px-Flag_of_Canada_%28Pantone%29.svg.png",
-    address: "Toronto, Canada",
-    description: "This is a first meetup!",
-  },
-  {
-    id: "m2",
-    title: "A Second Meetup",
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Canada_%28Pantone%29.svg/1200px-Flag_of_Canada_%28Pantone%29.svg.png",
-    address: "Vancouver, Canada",
-    description: "This is a second meetup!",
-  },
-];
+import { MongoClient } from "mongodb";
+import Head from "next/head";
+import { Fragment } from "react";
 export default function HomePage(props) {
   //const [loadedMeetups, setLoadedMeetups] = useState([]);
   // useEffect(() => {
@@ -25,7 +10,16 @@ export default function HomePage(props) {
   //   setLoadedMeetups(props.meetups);
   // }, []);
   return (
-      <MeetupList meetups={props.meetups} />
+    <Fragment>
+      <Head>
+        <title>React Meetups</title>
+        <meta
+          name="description"
+          content="Browse a list of highly active React meetups!"
+        />
+      </Head>
+      <MeetupList meetups={props.meetups} />;
+    </Fragment>
   );
 }
 // export async function getServerSideProps(context) {
@@ -40,10 +34,31 @@ export default function HomePage(props) {
 // }
 export async function getStaticProps() {
   // fetch data from an API
+  const uri = "mongodb://localhost:27017/";
+  let client;
+  try {
+    client = await MongoClient.connect(uri);
+  } catch (error) {
+    return {
+      props: {
+        meetups: [],
+      },
+    };
+  }
+  const db = client.db("test");
+  const meetupsCollection = db.collection("meetups");
+  const meetups = await meetupsCollection.find({}).toArray();
+  client.close();
   return {
     props: {
-      meetups: DUMMY_MEETUPS,
+      meetups: meetups.map((meetup) => ({
+        id: meetup._id.toString(),
+        title: meetup.title,
+        image: meetup.image,
+        address: meetup.address,
+        description: meetup.description,
+      })),
     },
-    revalidate: 10,
+    revalidate: 1,
   };
 }
